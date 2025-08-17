@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dein Moodboard-Abenteuer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f7; /* Helles, sauberes Grau */
+            color: #1d1d1f; /* Dunkelgrau für Lesbarkeit */
+        }
+        .container {
+            max-width: 768px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        /* Masonry-Layout für die Bilder */
+        #moodboard-gallery {
+            columns: 2;
+            column-gap: 1.5rem;
+        }
+        @media (min-width: 768px) {
+            #moodboard-gallery {
+                columns: 3;
+            }
+        }
+        .moodboard-image-container {
+            margin-bottom: 1.5rem;
+            display: inline-block;
+            width: 100%;
+        }
+        .moodboard-image {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Minimaler Schatten */
+        }
+        .moodboard-image:hover,
+        .moodboard-image.selected {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+        .moodboard-image.selected {
+            border: 3px solid #007aff; /* Apple-Blau als Akzent */
+        }
+        .ranking-item {
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .ranking-item:hover {
+            transform: translateY(-3px);
+            background-color: #e5e5ea;
+        }
+
+        #alert-box {
+            z-index: 1000;
+            transition: opacity 0.3s ease-in-out;
+            background-color: #ef4444; /* Etwas dunkleres Rot */
+        }
+
+        /* Styles für das Mood-Modal */
+        .mood-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .mood-modal-content {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+        }
+        .mood-modal-image-container {
+            columns: 2;
+            column-gap: 1rem;
+        }
+        .mood-modal-image-container img {
+            width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        /* Styles für die Gewinnscreen-Diashow */
+        .slideshow-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Seitenverhältnis */
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+        .slideshow-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        .slideshow-image.active {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="container p-4 min-h-screen flex flex-col items-center justify-center text-center">
+        <!-- Willkommensseite -->
+        <div id="welcome-screen" class="transition-opacity duration-500 ease-in-out opacity-100 p-6 bg-white rounded-xl shadow-sm transform scale-100 w-full">
+            <h1 class="text-4xl font-extrabold mb-4 tracking-tight text-gray-900">Hello Gorgeous-Biene</h1>
+            <p class="text-lg text-gray-600 mb-6">Wähle die Bilder aus, die dich am meisten inspirieren, um dein Mausebiene-Board zu erstellen</p>
+            <button id="start-button" class="bg-gray-800 text-white font-semibold py-3 px-8 rounded-full shadow-md hover:bg-gray-700 transition duration-300 transform hover:scale-105">
+                Los geht's!
+            </button>
+        </div>
+
+        <!-- Moodboard-Seite -->
+        <div id="moodboard-screen" class="hidden transition-opacity duration-500 ease-in-out opacity-0 p-6 bg-white rounded-xl shadow-sm w-full">
+            <h2 class="text-3xl font-bold mb-6 tracking-tight text-gray-900">Mausebiene-Board</h2>
+            <div id="moodboard-gallery">
+                <!-- Bilder werden hier dynamisch eingefügt -->
+            </div>
+            <button id="show-ranking-button" class="bg-gray-800 text-white font-semibold py-3 px-8 rounded-full shadow-md hover:bg-gray-700 transition duration-300 transform hover:scale-105 mt-6">
+                Ranking anzeigen
+            </button>
+        </div>
+
+        <!-- Ranking-Seite -->
+        <div id="ranking-screen" class="hidden transition-opacity duration-500 ease-in-out opacity-0 p-6 bg-white rounded-xl shadow-sm w-full">
+            <h2 class="text-3xl font-bold mb-6 tracking-tight text-gray-900">Wo will Sloverg hin?</h2>
+            <p class="text-gray-600 mb-4">Wähle wo wir kuscheln werden...</p>
+            <div id="ranking-list" class="space-y-4">
+                <!-- Ranking wird hier dynamisch eingefügt -->
+            </div>
+        </div>
+
+        <!-- Gewinn-Seite -->
+        <div id="win-screen" class="hidden transition-opacity duration-500 ease-in-out opacity-0 text-center p-6 bg-white rounded-xl shadow-sm w-full">
+            <h2 class="text-4xl font-extrabold mb-4 tracking-tight text-gray-900">🎊 Wuhuuuuuuu 🎊</h2>
+            <p class="text-2xl text-gray-600 mb-6">Wir kuscheln in <span id="chosen-destination" class="font-bold text-blue-500"></span>!</p>
+            <!-- Diashow für die Stimmung der gewählten Destination -->
+            <div id="win-slideshow" class="slideshow-container mb-6 mx-auto"></div>
+            <p class="text-lg text-gray-600">Du erhältst 1200€ Urlaubsguthaben.</p>
+        </div>
+
+        <!-- Custom Alert Box -->
+        <div id="alert-box" class="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg hidden"></div>
+
+        <!-- Mood-Modal -->
+        <div id="mood-modal" class="mood-modal-overlay hidden opacity-0 transition-opacity duration-300">
+            <div class="mood-modal-content w-full md:w-3/4 lg:w-1/2">
+                <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                <h3 id="modal-title" class="text-2xl font-bold mb-4"></h3>
+                <div id="modal-gallery" class="mood-modal-image-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- ANPASSBARE DATEN ---
+            // ======================================
+            // HINWEIS: HIER KANNST DU DIE DATEN DER APP ANPASSEN
+
+            // Deine Bilder und ihre assoziierten Reiseziele
+            const images = [
+                { url: "https://i.pinimg.com/1200x/67/4b/b6/674bb6443caa8660e6ea6a363f763a88.jpg", destinations: ['Niederlande', 'Dänemark', 'Schweden', 'Norwegen', 'Norddeutschland'] },
+                { url: "https://i.pinimg.com/1200x/db/bc/fa/dbbcfa48258280c1e2621d1ca7bedb8e.jpg", destinations: ['Niederlande', 'Dänemark', 'Schweden', 'Norwegen', 'Norddeutschland'] },
+                { url: "https://i.pinimg.com/1200x/6b/d7/f2/6bd7f2983d87f45e1936a7b244f757b0.jpg", destinations: ['Spanien', 'Marokko', 'Portugal', 'Italien'] },
+                { url: "https://i.pinimg.com/736x/ea/36/ec/ea36ec1ca43f9842ae3382a2afa99afc.jpg", destinations: ['Spanien', 'Marokko', 'Portugal', 'Italien'] },
+                { url: "https://i.pinimg.com/736x/3e/c3/0f/3ec30f358f2575e67617ac25c3091b71.jpg", destinations: ['Spanien', 'Marokko', 'Portugal', 'Italien'] },
+                { url: "https://i.pinimg.com/736x/c5/b3/67/c5b36740351760270c80e50acf272578.jpg", destinations: ['Spanien', 'Marokko', 'Portugal', 'Italien'] },
+                { url: "https://i.pinimg.com/736x/85/48/3c/85483c374785bde72008c6940f4d7234.jpg", destinations: ['Spanien', 'Marokko', 'Portugal', 'Italien'] },
+                { url: "https://i.pinimg.com/736x/49/f2/fe/49f2fe2e9dfba296cd57bcc02d52152f.jpg", destinations: ['Niederlande'] },
+                { url: "https://i.pinimg.com/736x/96/94/21/969421026abd0b7cd181ccc7604cffdc.jpg", destinations: ['Niederlande'] },
+                { url: "https://i.pinimg.com/736x/27/55/6d/27556dfca57cf80d65c7d0566dc62696.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/736x/f1/c8/a8/f1c8a8b01ee1c4281382a081aef35a13.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/736x/72/4f/4c/724f4c62801d737d1abc1979758b35dc.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/1200x/c8/1f/0b/c81f0bc9b1450866060f2900fbe3ed0b.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/13/80/93/138093b15bb9a57f7412a40e416e32d8.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/1200x/fd/27/c8/fd27c80eb8da10f06e836062d49cd375.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/f8/df/28/f8df2804e227b2f3a6c6b80d82e8a9f4.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/66/ec/85/66ec85f1219544d3d2badd10c54b67e4.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/1200x/8b/c8/e2/8bc8e2f1e88211949b20a921b3a462eb.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/c7/b5/38/c7b5382e0c7c93ba0f71f61da64d573d.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/05/02/d9/0502d94e5c0615e74d912fc45ceadff5.jpg", destinations: ['Teneriffa'] },
+                { url: "https://i.pinimg.com/736x/aa/8e/89/aa8e8916a4a93e64f302929a6d4e34c6.jpg", destinations: ['Schweden', 'Dänemark', 'Norwegen'] },
+                { url: "https://i.pinimg.com/736x/9d/74/b9/9d74b9c50be7835451793ff94625d32c.jpg", destinations: ['Schweden', 'Dänemark', 'Norwegen'] },
+                { url: "https://i.pinimg.com/736x/f4/e0/8d/f4e08d7150481cc981db03e629694f4a.jpg", destinations: ['Schweden', 'Dänemark', 'Norwegen'] },
+                { url: "https://i.pinimg.com/736x/68/09/2a/68092a61cd4a1c6d5cc498d7dfa94c22.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/736x/d5/c5/2f/d5c52fb9e25784678db6009763cf09a0.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/736x/6c/e2/84/6ce28410fc2714de87df080f8af8ac3a.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/736x/1e/2e/f1/1e2ef1276a2c58ba3fcd80a6ec35394a.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/1200x/eb/55/1b/eb551b286367988edd3baa3406748880.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/736x/51/e0/cb/51e0cb0161de30cd1221dac618cc8e19.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/736x/5f/ba/76/5fba76ea09e28916d6b13b5d6fc2bdd2.jpg", destinations: ['Marokko'] },
+                { url: "https://i.pinimg.com/1200x/e5/d3/fa/e5d3fa7055b47a60e790744406231756.jpg", destinations: ['Schweiz'] },
+                { url: "https://i.pinimg.com/736x/e9/e9/3b/e9e93b81416ccfd649c9cd53f3f81fcb.jpg", destinations: ['Schweiz'] },
+                { url: "https://i.pinimg.com/1200x/f3/7b/c4/f37bc4bf506df9450a1640ede8223526.jpg", destinations: ['Schweiz'] },
+                { url: "https://i.pinimg.com/736x/a2/86/78/a286780af899f72b29755f197bd98807.jpg", destinations: ['Schweiz'] },
+                { url: "https://i.pinimg.com/1200x/b1/1e/56/b11e5641123705b11c09170bfc534539.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/736x/16/5b/07/165b07ef78de08ef7edc6bd3b3142625.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/736x/de/8c/26/de8c265fea04adaf7cc654dc9e2fe978.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/736x/02/cc/88/02cc88d38e5a9f62d531205bc63f430e.jpg", destinations: ['Griechenland'] },
+                { url: "https://i.pinimg.com/1200x/2e/98/75/2e9875b201e28ef912c3b0ce013c486a.jpg", destinations: ['Niederlande'] },
+                { url: "https://i.pinimg.com/1200x/aa/f6/d4/aaf6d40d3752b5888af5083cdf54403d.jpg", destinations: ['Niederlande'] },
+                { url: "https://i.pinimg.com/1200x/b8/5d/f8/b85df859f71d484fb5cfd99f9679ea51.jpg", destinations: ['Niederlande'] },
+                
+            ];
+
+            // ======================================
+            // --- ENDE DER ANPASSBAREN DATEN ---
+
+            // DOM-Elemente
+            const welcomeScreen = document.getElementById('welcome-screen');
+            const moodboardScreen = document.getElementById('moodboard-screen');
+            const rankingScreen = document.getElementById('ranking-screen');
+            const winScreen = document.getElementById('win-screen');
+            const startButton = document.getElementById('start-button');
+            const showRankingButton = document.getElementById('show-ranking-button');
+            const moodboardGallery = document.getElementById('moodboard-gallery');
+            const rankingList = document.getElementById('ranking-list');
+            const chosenDestinationSpan = document.getElementById('chosen-destination');
+            const alertBox = document.getElementById('alert-box');
+            const moodModal = document.getElementById('mood-modal');
+            const closeModalButton = document.getElementById('close-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalGallery = document.getElementById('modal-gallery');
+            const winSlideshow = document.getElementById('win-slideshow');
+
+            let selectedImages = [];
+            let slideshowInterval;
+
+            // Funktion zum Anzeigen des Bildschirms
+            function showScreen(screen) {
+                const allScreens = [welcomeScreen, moodboardScreen, rankingScreen, winScreen];
+                allScreens.forEach(s => {
+                    s.classList.add('hidden', 'opacity-0');
+                    s.classList.remove('flex', 'opacity-100');
+                });
+                screen.classList.remove('hidden');
+                setTimeout(() => {
+                    screen.classList.remove('opacity-0');
+                    screen.classList.add('opacity-100');
+                }, 10);
+            }
+
+            // Funktion zum Mischen des Bild-Arrays
+            function shuffle(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+            
+            // Funktion zum Anzeigen einer benutzerdefinierten Meldung
+            function showAlert(message) {
+                alertBox.textContent = message;
+                alertBox.classList.remove('hidden');
+                setTimeout(() => {
+                    alertBox.classList.add('hidden');
+                }, 3000); // Nachricht nach 3 Sekunden ausblenden
+            }
+
+            // Startseite anzeigen
+            showScreen(welcomeScreen);
+
+            // Event-Listener für den Start-Button
+            startButton.addEventListener('click', () => {
+                showScreen(moodboardScreen);
+                renderMoodboard();
+            });
+
+            // Moodboard-Galerie rendern
+            function renderMoodboard() {
+                moodboardGallery.innerHTML = '';
+                shuffle(images); // Mischen, damit die Bilder bei jedem Start anders sind
+
+                images.forEach((imgData, index) => {
+                    // Erstelle einen Container für jedes Bild für das Masonry-Layout
+                    const imageContainer = document.createElement('div');
+                    imageContainer.classList.add('moodboard-image-container');
+
+                    const img = document.createElement('img');
+                    img.src = imgData.url;
+                    img.alt = `Moodboard Bild ${index + 1}`;
+                    img.dataset.index = index;
+                    img.classList.add('moodboard-image');
+
+                    img.addEventListener('click', () => {
+                        const isSelected = img.classList.toggle('selected');
+                        if (isSelected) {
+                            selectedImages.push(imgData);
+                        } else {
+                            selectedImages = selectedImages.filter(item => item.url !== imgData.url);
+                        }
+                    });
+
+                    imageContainer.appendChild(img);
+                    moodboardGallery.appendChild(imageContainer);
+                });
+            }
+
+            // Event-Listener für den "Ranking anzeigen"-Button
+            showRankingButton.addEventListener('click', () => {
+                if (selectedImages.length === 0) {
+                    // Verwende eine benutzerdefinierte Meldung anstelle von alert()
+                    showAlert('Bitte wähle mindestens ein Bild aus!');
+                    return;
+                }
+                showScreen(rankingScreen);
+                calculateRanking();
+            });
+
+            // Ranking berechnen und rendern
+            function calculateRanking() {
+                const ranking = {};
+
+                selectedImages.forEach(img => {
+                    img.destinations.forEach(destination => {
+                        ranking[destination] = (ranking[destination] || 0) + 1;
+                    });
+                });
+
+                // In ein Array umwandeln und sortieren
+                const sortedRanking = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
+
+                rankingList.innerHTML = '';
+                if (sortedRanking.length === 0) {
+                    const p = document.createElement('p');
+                    p.textContent = "Es wurde kein Reiseziel gefunden. Versuche es mit anderen Bildern.";
+                    p.classList.add('text-lg', 'text-red-500');
+                    rankingList.appendChild(p);
+                    return;
+                }
+
+                sortedRanking.forEach(([destination, score]) => {
+                    const div = document.createElement('div');
+                    div.classList.add('bg-gray-100', 'p-4', 'rounded-xl', 'shadow-sm', 'flex', 'items-center', 'justify-between', 'ranking-item');
+                    div.innerHTML = `
+                        <div>
+                            <span class="text-xl font-semibold text-gray-800">${destination}</span>
+                            <span class="text-md text-gray-500 block">${score} Punkt${score !== 1 ? 'e' : ''}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="show-mood-button bg-gray-800 text-white text-xs px-3 py-1 rounded-full shadow-md hover:bg-gray-700 transition duration-300 transform hover:scale-105" data-destination="${destination}">Mood</button>
+                            <button class="select-destination-button bg-blue-500 text-white text-xs px-3 py-1 rounded-full shadow-md hover:bg-blue-400 transition duration-300 transform hover:scale-105" data-destination="${destination}">Wählen</button>
+                        </div>
+                    `;
+                    rankingList.appendChild(div);
+                });
+
+                document.querySelectorAll('.show-mood-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        event.stopPropagation(); // Verhindert, dass der Klick auf das Elternelement durchgeht
+                        const destination = event.target.dataset.destination;
+                        openMoodModal(destination);
+                    });
+                });
+
+                document.querySelectorAll('.select-destination-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const destination = event.target.dataset.destination;
+                        showWinScreen(destination);
+                    });
+                });
+            }
+
+            // Funktion zum Öffnen des Mood-Modals
+            function openMoodModal(destination) {
+                modalTitle.textContent = `Mood für ${destination}`;
+                modalGallery.innerHTML = '';
+                const moodImages = images.filter(img => img.destinations.includes(destination));
+                moodImages.forEach(imgData => {
+                    const img = document.createElement('img');
+                    img.src = imgData.url;
+                    img.alt = destination;
+                    modalGallery.appendChild(img);
+                });
+                moodModal.classList.remove('hidden');
+                setTimeout(() => {
+                    moodModal.classList.remove('opacity-0');
+                }, 10);
+            }
+
+            // Funktion zum Schließen des Mood-Modals
+            closeModalButton.addEventListener('click', () => {
+                moodModal.classList.add('opacity-0');
+                setTimeout(() => {
+                    moodModal.classList.add('hidden');
+                }, 300);
+            });
+
+            // Gewinn-Seite anzeigen
+            function showWinScreen(destination) {
+                chosenDestinationSpan.textContent = destination;
+                renderSlideshow(destination);
+                showScreen(winScreen);
+            }
+
+            // Diashow im Gewinnscreen rendern
+            function renderSlideshow(destination) {
+                winSlideshow.innerHTML = '';
+                const moodImages = images.filter(img => img.destinations.includes(destination));
+                
+                if (moodImages.length === 0) {
+                    winSlideshow.innerHTML = '<p class="text-gray-500">Keine Bilder für diese Stimmung gefunden.</p>';
+                    return;
+                }
+                
+                moodImages.forEach((imgData, index) => {
+                    const img = document.createElement('img');
+                    img.src = imgData.url;
+                    img.alt = destination;
+                    img.classList.add('slideshow-image');
+                    if (index === 0) {
+                        img.classList.add('active');
+                    }
+                    winSlideshow.appendChild(img);
+                });
+
+                let currentSlide = 0;
+                const slides = document.querySelectorAll('.slideshow-image');
+                
+                clearInterval(slideshowInterval); // Vorheriges Intervall löschen
+                if (slides.length > 1) {
+                    slideshowInterval = setInterval(() => {
+                        slides[currentSlide].classList.remove('active');
+                        currentSlide = (currentSlide + 1) % slides.length;
+                        slides[currentSlide].classList.add('active');
+                    }, 3000); // Bildwechsel alle 3 Sekunden
+                }
+            }
+        });
+    </script>
+</body>
+</html>
